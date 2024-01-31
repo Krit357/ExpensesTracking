@@ -1,41 +1,9 @@
 import { createContext, useReducer } from "react";
 
-const DUMMY_EXPENSES = [
-  {
-    id: "e1",
-    description: "LENOVO REGION GO",
-    amount: 25000,
-    date: new Date("2024-01-25"),
-  },
-  {
-    id: "e2",
-    description: "Bord Game",
-    amount: 5000,
-    date: new Date("2024-01-26"),
-  },
-  {
-    id: "e3",
-    description: "Critical Care",
-    amount: 1700,
-    date: new Date("2024-02-13"),
-  },
-  {
-    id: "e4",
-    description: "Grocery",
-    amount: 1250,
-    date: new Date("2024-02-20"),
-  },
-  {
-    id: "e5",
-    description: "Fuel",
-    amount: 700,
-    date: new Date("2024-03-09"),
-  },
-];
-
 export const ExpensesContext = createContext({
   expenses: [],
   addExpenses: ({ description, amount, date }) => {},
+  setExpenses: (expenese) => {},
   deleteExpenses: (id) => {},
   updateExpenses: ({ id, description, amount, date }) => {},
 });
@@ -43,8 +11,10 @@ export const ExpensesContext = createContext({
 function expensesReducer(state, action) {
   switch (action.type) {
     case "Add":
-      const id = new Date().toString() + Math.random().toString();
-      return [{ ...action.payload, id: id }, ...state];
+      return [action.payload, ...state];
+    case "Set":
+      const inverted = action.payload.reverse();
+      return inverted;
     case "Update":
       const updateAbleIndex = state.findIndex(
         (expenses) => expenses.id === action.payload.id
@@ -66,10 +36,14 @@ function expensesReducer(state, action) {
 }
 
 export default function ExpensesContextProvider({ children }) {
-  const [expensesState, dispatch] = useReducer(expensesReducer, DUMMY_EXPENSES);
+  const [expensesState, dispatch] = useReducer(expensesReducer, []);
 
   function addExpenses(expensesData) {
     dispatch({ type: "Add", payload: expensesData });
+  }
+
+  function setExpenses(expenese) {
+    dispatch({ type: "Set", payload: expenese });
   }
 
   function deleteExpenses(id) {
@@ -83,6 +57,7 @@ export default function ExpensesContextProvider({ children }) {
   const value = {
     expenses: expensesState,
     addExpenses: addExpenses,
+    setExpenses: setExpenses,
     deleteExpenses: deleteExpenses,
     updateExpenses: updateExpenses,
   };

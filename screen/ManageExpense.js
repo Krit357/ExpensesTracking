@@ -1,15 +1,23 @@
-import { useContext, useLayoutEffect } from "react";
+import { useContext, useLayoutEffect, useState } from "react";
 import { View, StyleSheet, TextInput } from "react-native";
 import IconButton from "../components/UI/IconButton";
 import { GlobalStyles } from "../constants/styles";
 import Button from "../components/UI/Button";
 import { ExpensesContext } from "../store/expenses-context";
 import ExpensesForm from "../components/ManageExpenses/ExpensesForm";
+import { storeExpense, updateExpenses, deleteExpenses } from "../util/http";
+import IsLoading from "../components/UI/IsLoading";
 
 export default function ManageExpense({ route, navigation }) {
+  const [isLoading, setIsLoading] = useState(false);
+
   const expensesContext = useContext(ExpensesContext);
   const editExpenseId = route.params?.expenseId;
   const isEditing = !!editExpenseId;
+
+  const selectedExpenses = expensesContext.expenses.find(
+    (expense) => expense.id === editExpenseId
+  );
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -17,8 +25,8 @@ export default function ManageExpense({ route, navigation }) {
     });
   }, [isEditing, navigation]);
 
-  function deleteExpensesHandeler() {
-    console.log("Delete button clicked");
+  async function deleteExpensesHandeler() {
+    await deleteExpenses(editExpenseId);
     expensesContext.deleteExpenses(editExpenseId);
     navigation.goBack();
   }
@@ -27,15 +35,23 @@ export default function ManageExpense({ route, navigation }) {
     navigation.goBack();
   }
 
-  function confirmHandeler(expensesData) {
-    {
-      isEditing
-        ? expensesContext.updateExpenses(editExpenseId, expensesData)
-        : expensesContext.addExpenses(expensesData);
+  async function confirmHandeler(expensesData) {
+    if (isEditing) {
+      //Update
+      setIsLoading(true);
+      expensesContext.updateExpenses(editExpenseId, expensesData);
+      await updateExpenses(editExpenseId, expensesData);
+    } else {
+      //Adding
+      setIsLoading(true);
+      const id = await storeExpense(expensesData);
+      expensesContext.addExpenses({ ...expensesData, id: id });
     }
-
+    setIsLoading(false);
     navigation.goBack();
   }
+
+  if (isLoading) return <IsLoading />;
   return (
     <View style={styles.container}>
       <ExpensesForm
@@ -43,6 +59,7 @@ export default function ManageExpense({ route, navigation }) {
         isEditing={isEditing}
         onSubmit={confirmHandeler}
         onCancel={cancelHandeler}
+        defaultValues={selectedExpenses}
       />
 
       {isEditing && (
