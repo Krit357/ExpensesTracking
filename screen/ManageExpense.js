@@ -10,6 +10,8 @@ import IsLoading from "../components/UI/IsLoading";
 
 export default function ManageExpense({ route, navigation }) {
   const [isLoading, setIsLoading] = useState(false);
+  const [isSubmiting, setIsSubmiting] = useState(false);
+  const [error, setError] = useState();
 
   const expensesContext = useContext(ExpensesContext);
   const editExpenseId = route.params?.expenseId;
@@ -26,9 +28,15 @@ export default function ManageExpense({ route, navigation }) {
   }, [isEditing, navigation]);
 
   async function deleteExpensesHandeler() {
-    await deleteExpenses(editExpenseId);
-    expensesContext.deleteExpenses(editExpenseId);
-    navigation.goBack();
+    setIsSubmiting(true);
+    try {
+      await deleteExpenses(editExpenseId);
+      expensesContext.deleteExpenses(editExpenseId);
+      navigation.goBack();
+    } catch (error) {
+      setError("Cannot delete");
+    }
+    setIsSubmiting(false);
   }
 
   function cancelHandeler() {
@@ -36,22 +44,37 @@ export default function ManageExpense({ route, navigation }) {
   }
 
   async function confirmHandeler(expensesData) {
-    if (isEditing) {
-      //Update
-      setIsLoading(true);
-      expensesContext.updateExpenses(editExpenseId, expensesData);
-      await updateExpenses(editExpenseId, expensesData);
-    } else {
-      //Adding
-      setIsLoading(true);
-      const id = await storeExpense(expensesData);
-      expensesContext.addExpenses({ ...expensesData, id: id });
+    setIsSubmiting(true);
+    try {
+      if (isEditing) {
+        //Update
+        setIsLoading(true);
+        expensesContext.updateExpenses(editExpenseId, expensesData);
+        await updateExpenses(editExpenseId, expensesData);
+      } else {
+        //Adding
+        setIsLoading(true);
+        const id = await storeExpense(expensesData);
+        expensesContext.addExpenses({ ...expensesData, id: id });
+      }
+      navigation.goBack();
+    } catch (error) {
+      setError("Cannot confirm data");
+      isSubmiting(false);
     }
     setIsLoading(false);
-    navigation.goBack();
+  }
+
+  function errorHandeler() {
+    setError(null);
+  }
+
+  if (error && !isSubmiting) {
+    return <ErrorOverlay message={error} onConfirm={errorHandeler} />;
   }
 
   if (isLoading) return <IsLoading />;
+
   return (
     <View style={styles.container}>
       <ExpensesForm
